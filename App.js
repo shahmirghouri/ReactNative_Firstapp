@@ -1,7 +1,16 @@
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 // import logo from "./assets/logo.png";
 import * as ImagePicker from "expo-image-picker";
+import * as Sharing from "expo-sharing";
+import uploadToAnonymousFilesAsync from "anonymous-files";
 
 export default function App() {
   let [selectedImage, setSelectedImage] = React.useState(null);
@@ -17,7 +26,25 @@ export default function App() {
       return;
     }
     setSelectedImage({ localUri: pickerResult.uri });
+
+    if (Platform.OS === "web") {
+      let remoteUri = await uploadToAnonymousFilesAsync(pickerResult.uri);
+      setSelectedImage({ localUri: pickerResult.uri, remoteUri });
+    } else {
+      setSelectedImage({ localUri: pickerResult.uri, remoteUri: null });
+    }
   };
+
+  let openShareDialogAsync = async () => {
+    if (!(await Sharing.isAvailableAsync())) {
+      alert(
+        `The image is available for sharing at: ${selectedImage.remoteUri}`
+      );
+      return;
+    }
+    Sharing.shareAsync(selectedImage.localUri || selectedImage.localUri);
+  };
+
   if (selectedImage !== null) {
     return (
       <View style={styles.container}>
@@ -27,6 +54,9 @@ export default function App() {
           }}
           style={styles.thumbnail}
         />
+        <TouchableOpacity onPress={openShareDialogAsync} style={styles.button}>
+          <Text style={styles.buttonText}>Share this Photo ...</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -70,7 +100,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
   },
   button: {
-    backgroundColor: "maroon",
+    backgroundColor: "red",
     padding: 20,
     borderRadius: 5,
     marginTop: 10,
